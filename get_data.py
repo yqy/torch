@@ -5,6 +5,7 @@ from tempfile import TemporaryFile
 
 import timeit
 import cPickle
+from conf import *
 
 MENTION_TYPES = {
     "PRONOMINAL": 0,
@@ -14,7 +15,7 @@ MENTION_TYPES = {
 }
 MENTION_NUM, SENTENCE_NUM, START_INDEX, END_INDEX, MENTION_TYPE, CONTAINED = 0, 1, 2, 3, 4, 5
 
-DIR = "/home/qingyu/data/kevin/"
+DIR = conf.DIR
 embedding_file = DIR+"features/mention_data/word_vectors.npy"
 
 span_dimention = 5*50
@@ -26,9 +27,9 @@ numpy.set_printoptions(threshold=numpy.nan)
 
 def write_pair_feature_data(file_name):
 
-    doc_path = "/home/qingyu/data/kevin/features/doc_data/%s/"%file_name
-    pair_path = "/home/qingyu/data/kevin/features/mention_pair_data/%s/"%file_name
-    mention_path = "/home/qingyu/data/kevin/features/mention_data/%s/"%file_name
+    doc_path = DIR+"features/doc_data/%s/"%file_name
+    pair_path = DIR+"features/mention_pair_data/%s/"%file_name
+    mention_path = DIR+"features/mention_data/%s/"%file_name
 
     #embedding_matrix = numpy.load(embedding_file) 
 

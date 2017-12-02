@@ -35,12 +35,12 @@ if args.language == "en":
     embedding_size = 34275
     word_embedding_dimention = 9*50
 else:
-    pair_feature_dimention = 77
-    mention_feature_dimention = 24
-    span_dimention = 5*50
-    embedding_dimention = 50
-    embedding_size = 34275
-    word_embedding_dimention = 9*50
+    pair_feature_dimention = 75
+    mention_feature_dimention = 23
+    span_dimention = 5*64
+    embedding_dimention = 64
+    embedding_size = 24683
+    word_embedding_dimention = 9*64
 
 torch.cuda.set_device(args.gpu)
  
@@ -55,6 +55,7 @@ def main():
         network_model = torch.load(network_file)
     else:
         embedding_matrix = numpy.load(embedding_file)
+        print len(embedding_matrix)
 
         "Building torch model"
         network_model = network.Network(pair_feature_dimention,mention_feature_dimention,word_embedding_dimention,span_dimention,1000,embedding_size,embedding_dimention,embedding_matrix).cuda()

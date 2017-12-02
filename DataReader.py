@@ -18,13 +18,8 @@ MENTION_TYPES = {
 }
 MENTION_NUM, SENTENCE_NUM, START_INDEX, END_INDEX, MENTION_TYPE, CONTAINED = 0, 1, 2, 3, 4, 5
 
-DIR = "/home/qingyu/data/kevin/"
+DIR = args.DIR
 embedding_file = DIR+"features/mention_data/word_vectors.npy"
-
-span_dimention = 5*50
-embedding_dimention = 50
-embedding_size = 34275
-word_embedding_dimention = 9*50
 
 numpy.set_printoptions(threshold=numpy.nan)
 random.seed(args.random_seed)
@@ -32,11 +27,11 @@ random.seed(args.random_seed)
 class DataGnerater():
     def __init__(self,file_name):
 
-        doc_path = "/home/qingyu/data/kevin/features/doc_data/%s/"%file_name
-        pair_path = "/home/qingyu/data/kevin/features/mention_pair_data/%s/"%file_name
-        mention_path = "/home/qingyu/data/kevin/features/mention_data/%s/"%file_name
+        doc_path = DIR+"features/doc_data/%s/"%file_name
+        pair_path = DIR+"features/mention_pair_data/%s/"%file_name
+        mention_path = DIR+"features/mention_data/%s/"%file_name
 
-        gold_path = "/home/qingyu/data/kevin/gold/"+file_name.split("_")[0]
+        gold_path = DIR+"gold/"+file_name.split("_")[0]
         # read gold chain
         self.gold_chain = {}
         gold_file = open(gold_path)
@@ -68,7 +63,6 @@ class DataGnerater():
         self.document_features = numpy.load(doc_path + 'df.npy')
         self.doc_pairs = numpy.load(doc_path + 'dpi.npy') # each line is the pair_start_index -- pair_end_index
         self.doc_mentions = numpy.load(doc_path + 'dmi.npy') # each line is the mention_start_index -- mention_end_index
-
 
     def generater(self,shuffle=False):
 
@@ -144,6 +138,8 @@ class DataGnerater():
              
                 this_thrainig_data = (ana_word_index,ana_span,ana_feature,candi_word_index,candi_span,pair_feature_array,target_for_each_mention[i],mention_id_for_each_mention[i])
                 ## mention_id_for_each_mention: list, each item is like : (doc_id,current_mention_id, candidate_id)
+                #if len(pair_feature_array) > 0:
+                #    print len(ana_word_index),len(ana_span),len(ana_feature),len(pair_feature_array[-1])
 
                 doc_end = False
                 if i == inside_index[-1]:
@@ -193,6 +189,6 @@ def distance(a):
     return d
 
 if __name__ == "__main__":
-    data,doc_end = DataGnerater("test_reduced")   
-    for t in data.generater():
+    data = DataGnerater("test_reduced")   
+    for t,w in data.generater():
         pass
