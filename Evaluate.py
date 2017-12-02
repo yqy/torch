@@ -24,11 +24,16 @@ import utils
 import cPickle
 sys.setrecursionlimit(1000000)
 
-word_embedding_dimention = 9*50
+if args.language == "en":
+    word_embedding_dimention = 9*50
+else:
+    word_embedding_dimention = 9*64
+
+torch.cuda.set_device(args.gpu)
 
 def evaluate(network_model,doc,best_thres=0.5):
 
-    best_thres = 0.5
+    best_thres = best_thres
 
     docs_for_test = []
     gold_docs_for_test = []
@@ -41,12 +46,50 @@ def evaluate(network_model,doc,best_thres=0.5):
     ana_probs = []
     coref_probs = []
     gold_anaphora = []
-
     last_candidates_id = []
 
     for data,doc_end in doc.generater():
         ana_word_index,ana_span,ana_feature,candi_word_index,candi_span,pair_feature_array,target,mention_ids = data
         did,mention_id,pair_candidates_id = mention_ids 
+
+        ## generate actions ...
+
+        if len(target) == 0:
+
+            ana_probs.append(1.0)
+            coref_probs.append([])
+            this_action = -1 
+
+        else:
+
+            mention_index = autograd.Variable(torch.from_numpy(ana_word_index).type(torch.cuda.LongTensor))
+            mention_span = autograd.Variable(torch.from_numpy(ana_span).type(torch.cuda.FloatTensor))
+            mention_feature = autograd.Variable(torch.from_numpy(ana_feature).type(torch.cuda.FloatTensor))
+            candi_index = autograd.Variable(torch.from_numpy(candi_word_index).type(torch.cuda.LongTensor))
+            candi_spans = autograd.Variable(torch.from_numpy(candi_span).type(torch.cuda.FloatTensor))
+            pair_feature = autograd.Variable(torch.from_numpy(pair_feature_array).type(torch.cuda.FloatTensor))
+
+            output,_ = network_model.forward(word_embedding_dimention,mention_index,mention_span,mention_feature,mention_index,mention_span,candi_index,candi_spans,pair_feature)
+            output = output.data.cpu().numpy()[0]
+
+            anaphoric_prob = output[0]
+            coref_prob = output[1:]
+
+            ana_probs.append(anaphoric_prob)
+            coref_probs.append(coref_prob)
+                
+            ac_list = list(coref_prob)
+            this_action = ac_list.index(max(ac_list))
+
+        action_list.append(this_action)
+        last_candidates_id.append(mention_id)
+
+        if sum(target) == 0:
+            gold_anaphora.append(0)
+        else:
+            gold_anaphora.append(1)
+ 
+
         if doc_end:
             ## evaluation
             gold_chain = doc.gold_chain[did]
@@ -76,6 +119,7 @@ def evaluate(network_model,doc,best_thres=0.5):
                     should_cluster = new_cluster_num
                     new_cluster_num += 1
                 else:
+                    #print action,cluster_info
                     should_cluster = cluster_info[action]
                 
                 cluster_info.append(should_cluster)
@@ -88,13 +132,13 @@ def evaluate(network_model,doc,best_thres=0.5):
             ## predict results with all things: 
 
                 ac_list = [ana_prob] + list(coref_prob)
-                action = ac_list.index(max(ac_list))
+                this_action = ac_list.index(max(ac_list))
 
-                if  action == 0: # it is not an anphoric mention
+                if  this_action == 0: # it is not an anphoric mention
                     should_cluster = new_cluster_num
                     new_cluster_num += 1
                 else:
-                    should_cluster = cluster_info[action-1]
+                    should_cluster = cluster_info[this_action-1]
 
                 cluster_info.append(should_cluster)
             ev_document = utils.get_evaluation_document(cluster_info,gold_chain,last_candidates_id,new_cluster_num)
@@ -106,43 +150,7 @@ def evaluate(network_model,doc,best_thres=0.5):
             gold_anaphora = []
             last_candidates_id = []
 
-            ## generate actions ...
-
-        if len(target) == 0:
-
-            ana_probs.append(1.0)
-            coref_probs.append([])
-            action = -1 
-
-        else:
-
-            mention_index = autograd.Variable(torch.from_numpy(ana_word_index).type(torch.cuda.LongTensor))
-            mention_span = autograd.Variable(torch.from_numpy(ana_span).type(torch.cuda.FloatTensor))
-            mention_feature = autograd.Variable(torch.from_numpy(ana_feature).type(torch.cuda.FloatTensor))
-            candi_index = autograd.Variable(torch.from_numpy(candi_word_index).type(torch.cuda.LongTensor))
-            candi_spans = autograd.Variable(torch.from_numpy(candi_span).type(torch.cuda.FloatTensor))
-            pair_feature = autograd.Variable(torch.from_numpy(pair_feature_array).type(torch.cuda.FloatTensor))
-
-            output,_ = network_model.forward(word_embedding_dimention,mention_index,mention_span,mention_feature,mention_index,mention_span,candi_index,candi_spans,pair_feature)
-            output = output.data.cpu().numpy()[0]
-
-            anaphoric_prob = output[0]
-            coref_prob = output[1:]
-
-            ana_probs.append(anaphoric_prob)
-            coref_probs.append(coref_prob)
-                
-            ac_list = list(coref_prob)
-            action = ac_list.index(max(ac_list))
-
-        action_list.append(action)
-        last_candidates_id.append(mention_id)
-
-        if sum(target) == 0:
-            gold_anaphora.append(0)
-        else:
-            gold_anaphora.append(1)
-   
+  
     p,r,f,thred = utils.get_prf_probs(gold_anaphor_for_test,predict_anaphor_for_test) 
     print "for Anaphority Identification"
     print "P: %f R: %f F: %f with thred %f"%(p,r,f,thred)
@@ -169,4 +177,15 @@ def Output_Result(doc4test):
     print "CEAF: recall: %f precision: %f  f1: %f"%(cr,cp,cf)
     
 if __name__ == "__main__":
-    main()
+
+    network_file = "./model/pretrain/network_model_pretrain.0"
+    #network_file = "./model/model.pkl"
+    print >> sys.stderr,"Read model from ./model/model.pkl"
+    network_model = torch.load(network_file)
+
+    dev_docs = DataReader.DataGnerater("dev")
+
+    best_thres = 0.5
+
+    best_thres = evaluate(network_model,dev_docs,best_thres)
+

@@ -55,7 +55,7 @@ def main():
         network_model = torch.load(network_file)
     else:
         embedding_matrix = numpy.load(embedding_file)
-        print len(embedding_matrix)
+        #print len(embedding_matrix)
 
         "Building torch model"
         network_model = network.Network(pair_feature_dimention,mention_feature_dimention,word_embedding_dimention,span_dimention,1000,embedding_size,embedding_dimention,embedding_matrix).cuda()
@@ -95,17 +95,9 @@ def main():
         neg_num = 0
         inside_time = 0.0
 
-        loss = None
 
         for data,doc_end in train_docs.generater(shuffle):
             ana_word_index,ana_span,ana_feature,candi_word_index,candi_span,pair_feature_array,target,mention_ids = data
-
-            if doc_end:
-                cost_this_turn += loss.data[0]
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                loss = None
 
             if len(pair_feature_array) >= 500:
                 continue
@@ -130,10 +122,12 @@ def main():
             lable = autograd.Variable(torch.cuda.FloatTensor([gold]))
             output,scores = network_model.forward(word_embedding_dimention,mention_index,mention_span,mention_feature,mention_index,mention_span,candi_index,candi_spans,pair_feature,dropout_rate)
 
-            if loss is not None:
-                loss += F.binary_cross_entropy(output,lable)
-            else:
-                loss = F.binary_cross_entropy(output,lable)
+            optimizer.zero_grad()
+            loss = F.binary_cross_entropy(output,lable)
+            loss.backward()
+            optimizer.step()
+
+            cost_this_turn += loss.data[0]
 
         end_time = timeit.default_timer()
         print >> sys.stderr, "PreTrain",echo,"Total cost:",cost_this_turn
