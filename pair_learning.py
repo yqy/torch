@@ -160,9 +160,10 @@ def main():
         end_time = timeit.default_timer()
         print >> sys.stderr, "PreTrain",echo,"Pair total cost:",pair_cost_this_turn,"Anaphoricity total cost", ana_cost_this_turn
         print >> sys.stderr, "PreTRAINING Use %.3f seconds"%(end_time-start_time)
-        print >> sys.stderr, "Inside Use %.3f seconds"%(inside_time)
-        print >> sys.stderr, "Neg:Pos",neg_num,pos_num
         print >> sys.stderr, "Learning Rate",lr
+
+        print >> sys.stderr,"save model ..."
+        torch.save(network_model, model_save_dir+"network_model_pretrain.%d"%echo)
 
         #if cost_this_turn > last_cost:
         #    lr = lr*0.7 
