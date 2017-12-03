@@ -18,7 +18,7 @@ from conf import *
 
 import DataReader
 import evaluation
-import network
+import net as network
 import utils
 
 import cPickle
@@ -178,14 +178,14 @@ def Output_Result(doc4test):
     
 if __name__ == "__main__":
 
-    network_file = "./model/pretrain/network_model_pretrain.0"
+    network_file = "./model/pretrain/network_model_pretrain.best"
     #network_file = "./model/model.pkl"
     print >> sys.stderr,"Read model from ./model/model.pkl"
     network_model = torch.load(network_file)
 
     dev_docs = DataReader.DataGnerater("dev")
 
-    best_thres = 0.5
+    best_thres = 0.35
 
     best_thres = evaluate(network_model,dev_docs,best_thres)
 

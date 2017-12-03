@@ -87,6 +87,7 @@ def main():
         start_time = timeit.default_timer()
         print "Pretrain Epoch:",echo
 
+        #optimizer = optim.RMSprop(filter(lambda p: p.requires_grad, network_model.parameters()), lr=lr, weight_decay=l2_lambda)
         optimizer = optim.RMSprop(network_model.parameters(), lr=lr, weight_decay=l2_lambda)
 
         cost_this_turn = 0.0
@@ -136,8 +137,8 @@ def main():
         print >> sys.stderr, "Neg:Pos",neg_num,pos_num
         print >> sys.stderr, "Learning Rate",lr
 
-        if cost_this_turn > last_cost:
-            lr = lr*0.7 
+        #if cost_this_turn > last_cost:
+        #    lr = lr*0.7 
         last_cost = cost_this_turn
 
         print >> sys.stderr,"save model ..."

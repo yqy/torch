@@ -1,3 +1,4 @@
+#coding=utf8
 import sys
 import numpy
 import numpy as np
@@ -53,6 +54,9 @@ class DataGnerater():
         self.mention_pair_feature = numpy.load(mention_path+"yqy.npy",mmap_mode='r')
         #self.mention_pair_feature = numpy.lib.format.open_memmap(mention_path+"pi.npy")
 
+        #self.mention_feature_arrays = [] ## mention feature is saved in this array
+        self.mention_feature_arrays = numpy.load(mention_path+"mfyqy.npy",mmap_mode='r')
+
     ## for pairs
         #self.pair_feature = numpy.load(pair_path + 'pf.npy')
         self.pair_coref_info = numpy.load(pair_path + "y.npy")    
@@ -64,12 +68,117 @@ class DataGnerater():
         self.doc_pairs = numpy.load(doc_path + 'dpi.npy') # each line is the pair_start_index -- pair_end_index
         self.doc_mentions = numpy.load(doc_path + 'dmi.npy') # each line is the mention_start_index -- mention_end_index
 
+        self.batch = []
+        # build training data  
+        doc_index = range(self.doc_pairs.shape[0])
+        done_num = 0
+        total_num = self.doc_pairs.shape[0]
+        estimate_time = 0.0
+        self.n_anaphors = 0
+
+        for did in doc_index:
+            start_time = timeit.default_timer() 
+            ps, pe = self.doc_pairs[did]
+            ms, me = self.doc_mentions[did]
+            self.n_anaphors += me - ms
+            
+            done_num += 1
+
+            doc_mention_sizes = me - ms
+            document_feature = self.document_features[did]
+
+            #mention_feature_indoc = self.mention_feature[ms:me] 
+            #for mf in mention_feature_indoc:
+            #    self.mention_feature_arrays.append(get_mention_features(mf,me-ms,document_feature))
+
+            max_pairs = 10000
+            min_anaphor = 1
+            min_pair = 0
+            while min_anaphor < doc_mention_sizes:
+                max_anaphor = min(new_max_anaphor(min_anaphor, max_pairs), me - ms)
+                max_pair = min(max_anaphor * (max_anaphor - 1) / 2, pe - ps) 
+
+                mentions = np.arange(ms, ms + max_anaphor)
+                antecedents = np.arange(max_anaphor - 1)
+                anaphors = np.arange(min_anaphor, max_anaphor)
+                pairs = np.arange(ps + min_pair, ps + max_pair)
+                pair_antecedents = np.concatenate([np.arange(ana)
+                                                    for ana in range(min_anaphor, max_anaphor)]) 
+                pair_anaphors = np.concatenate([(ana - min_anaphor) *
+                                                    np.ones(ana, dtype='int32')
+                                                    for ana in range(min_anaphor, max_anaphor)])
+                '''
+                print "mentions",len(mentions),mentions # 表示应该取的mention list
+                print "ante",len(antecedents),antecedents #表示每个batch (mention list) 之中,要选取作为antecedents的index
+                print "anaph",len(anaphors),anaphors #表示每个batch (mention list) 之中,要选取作为anaphors的index
+                print "pairs",len(pairs),pairs #表示对应的pair_feature之类的信息
+                print "pair_ante",len(pair_antecedents),pair_antecedentsi #表示要变成pair的antecedents index
+                print "pair_ana",len(pair_anaphors),pair_anaphors #表示要变成pair的ana index
+                '''
+
+
+                positive, negative = [], []
+                ana_to_pos, ana_to_neg = {}, {}
+
+                ys = self.pair_coref_info[pairs]
+                for i, (ana, y) in enumerate(zip(pair_anaphors, ys)):
+                    labels = positive if y == 1 else negative
+                    ana_to_ind = ana_to_pos if y == 1 else ana_to_neg
+                    if ana not in ana_to_ind:
+                        ana_to_ind[ana] = [len(labels), len(labels)]
+                    else:
+                        ana_to_ind[ana][1] = len(labels)
+                    labels.append(i)
+
+                # positive : index of positive examples in pairs
+                # negative : index of negative examples in pairs
+
+                #print len(positive),len(negative),"mentions",len(mentions),"pairs",len(pairs)
+                #print "postive",positive
+                #print "negative",negative
+
+                pos_starts, pos_ends, neg_starts, neg_ends = [], [], [], []
+                anaphoricities = []
+                for ana in range(0, max_anaphor - min_anaphor):
+                    if ana in ana_to_pos:
+                        start, end = ana_to_pos[ana]
+                        pos_starts.append(start)
+                        pos_ends.append(end + 1)
+                        anaphoricities.append(1)
+                    else:
+                        anaphoricities.append(0)
+                    if ana in ana_to_neg:
+                        start, end = ana_to_neg[ana]
+                        neg_starts.append(start)
+                        neg_ends.append(end + 1)
+                # anaphoricities: = 1 if mention is anaphoricities else 0
+                #print len(anaphoricities) = len(mentions),"pairs",len(pairs)
+                #print anaphoricities
+                 
+                self.batch.append( (mentions,antecedents,anaphors,
+                            pairs,pair_antecedents,pair_anaphors,
+                            numpy.array(anaphoricities),numpy.array(positive),numpy.array(negative)) )
+
+                min_anaphor = max_anaphor
+                min_pair = max_pair
+        
+            end_time = timeit.default_timer()
+            estimate_time += (end_time-start_time)
+            EST = total_num*estimate_time/float(done_num)
+            #print >> sys.stderr, "Total use %.3f seconds for doc %d with %d mentions (%d/%d) -- EST:%f , Left:%f"%(end_time-start_time,did,me - ms,done_num,total_num,EST,EST-estimate_time)
+        self.anaphors_per_batch = float(self.n_anaphors) / len(self.batch)
+        #self.mention_feature_arrays = numpy.array(self.mention_feature_arrays)
+        self.scale_factor = self.anaphors_per_batch
+        self.anaphoricity_scale_factor = 50 * self.anaphors_per_batch 
+
     def generater(self,shuffle=False):
 
         # build training data  
         doc_index = range(self.doc_pairs.shape[0])
         if shuffle:
             numpy.random.shuffle(doc_index) 
+
+        batch = []
 
         done_num = 0
         total_num = self.doc_pairs.shape[0]
@@ -88,15 +197,12 @@ class DataGnerater():
             # build training data for each doc
             mention_span_indoc = self.mention_spans[ms:me]
             mention_word_index_indoc = self.mention_word_index[ms:me]
-            mention_feature_indoc = self.mention_feature[ms:me]
+            #mention_feature_indoc = self.mention_feature[ms:me]
             mention_num_indoc = self.mention_num[ms:me]
             mention_id_real = self.mention_id[ms:me]
+
+            mention_feature_list = self.mention_feature_arrays[ms:me]
         
-            mention_feature_list = []
-            for mf in mention_feature_indoc:
-                mention_feature_list.append(get_mention_features(mf,me-ms,document_feature))
-            mention_feature_list = numpy.array(mention_feature_list)
-       
             mention_pair_feature_indoc = self.mention_pair_feature[ps:pe]    
 
             pair_coref_indoc = self.pair_coref_info[ps:pe].astype(int)
@@ -151,6 +257,49 @@ class DataGnerater():
             estimate_time += (end_time-start_time)
             EST = total_num*estimate_time/float(done_num)
             print >> sys.stderr, "Total use %.3f seconds for doc %d with %d mentions (%d/%d) -- EST:%f , Left:%f"%(end_time-start_time,did,me - ms,done_num,total_num,EST,EST-estimate_time)
+
+    def train_generater(self,filter_num=700,shuffle=False,batch_size=10000):
+
+        if shuffle:
+            numpy.random.shuffle(self.batch) 
+
+        done_num = 0
+        total_num = len(self.batch)
+        estimate_time = 0.0
+        for mentions,antecedents,anaphors,pairs,pair_antecedents,pair_anaphors,anaphoricities,positive,negative in self.batch:
+            start_time = timeit.default_timer() 
+            done_num += 1
+            candi_word_index_return = self.mention_word_index[mentions[0]:mentions[-1]+1][antecedents]
+            candi_span_return = self.mention_spans[mentions[0]:mentions[-1]+1][antecedents]
+            mention_word_index_return = self.mention_word_index[mentions[0]:mentions[-1]+1][anaphors]
+            mention_span_return = self.mention_spans[mentions[0]:mentions[-1]+1][anaphors]
+
+            pair_features_return = self.mention_pair_feature[pairs[0]:pairs[-1]+1]
+            pair_target_return = self.pair_coref_info[pairs[0]:pairs[-1]+1].astype(int)
+
+            anaphoricity_word_index = mention_word_index_return
+            anaphoricity_span = mention_span_return
+            anaphoricity_target = anaphoricities
+            anaphoricity_feature = self.mention_feature_arrays[mentions[0]:mentions[-1]+1][anaphors]
+
+            assert len(anaphoricities) == len(anaphoricity_feature)
+            assert len(anaphoricities) == len(anaphoricity_span)
+
+            yield mention_word_index_return, mention_span_return, candi_word_index_return,candi_span_return,\
+            pair_features_return,pair_antecedents,pair_anaphors,pair_target_return,positive,negative,\
+            anaphoricity_word_index, anaphoricity_span, anaphoricity_feature, anaphoricity_target
+
+            
+            end_time = timeit.default_timer()
+            estimate_time += (end_time-start_time)
+            EST = total_num*estimate_time/float(done_num)
+            print >> sys.stderr, "Total use %.3f seconds for %d/%d -- EST:%f , Left:%f"%(end_time-start_time,done_num,total_num,EST,EST-estimate_time)
+
+
+def new_max_anaphor(n, k): 
+    # find m such that sum from i=n to m-1 is < k
+    # i.e., total number of pairs with anaphor num between n and m (exclusive) < k
+    return max(1, int(np.floor(0.5 * (1 + np.sqrt(8 * k + 4 * n * n - 4 * n + 1))))) 
     
 def get_mention_features(mention_features, doc_mention_size,document_features):
     features = numpy.array([])
@@ -190,5 +339,11 @@ def distance(a):
 
 if __name__ == "__main__":
     data = DataGnerater("test_reduced")   
-    for t,w in data.generater():
+    data.train_generater()
+    for t in data.train_generater():
+        mention_word_index_return, mention_span_return, candi_word_index_return,candi_span_return,pair_features_return,pair_antecedents,pair_anaphors,target,positive,negative,anaphoricity_word_index, anaphoricity_span, anaphoricity_feature, anaphoricity_target = t
         pass
+        #print pair_anaphors
+    #for t in data.train_generater():
+    #    candi_word_index, candi_span, mention_word_index, mention_span, feature_pair, target = t
+    #    print len(candi_word_index),len(candi_span),len(mention_word_index),len(mention_span),len(feature_pair),len(target)

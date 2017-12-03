@@ -15,7 +15,7 @@ MENTION_TYPES = {
 }
 MENTION_NUM, SENTENCE_NUM, START_INDEX, END_INDEX, MENTION_TYPE, CONTAINED = 0, 1, 2, 3, 4, 5
 
-DIR = conf.DIR
+DIR = args.DIR
 embedding_file = DIR+"features/mention_data/word_vectors.npy"
 
 span_dimention = 5*50
@@ -56,6 +56,7 @@ def write_pair_feature_data(file_name):
     doc_mention_sizes = {} # save the total mention size of each document
 
     pair_feature_list = []
+    mention_feature_arrays = []
     
     for did in np.arange(doc_pairs.shape[0]):
         start_time = timeit.default_timer() 
@@ -75,6 +76,7 @@ def write_pair_feature_data(file_name):
         mention_feature_list = []
         for mf in mention_feature_indoc:
             mention_feature_list.append(get_mention_features(mf,me-ms,document_feature))
+        mention_feature_arrays += mention_feature_list
         mention_feature_list = numpy.array(mention_feature_list)
        
         pair_feature_indoc = pair_feature[ps:pe].astype(int)
@@ -112,8 +114,10 @@ def write_pair_feature_data(file_name):
         print >> sys.stderr, "Total use %.3f seconds for doc %d with %d mentions"%(end_time-start_time,did,me - ms)
     #print pair_feature_list
     pair_feature_list = numpy.array(pair_feature_list,dtype="float32")
+    mention_feature_arrays = numpy.array(mention_feature_arrays,dtype="float32")
 
     numpy.save(mention_path+"yqy.npy",pair_feature_list)
+    numpy.save(mention_path+"mfyqy.npy",mention_feature_arrays)
     
 def get_mention_features(mention_features, doc_mention_size,document_features):
     features = numpy.array([])
