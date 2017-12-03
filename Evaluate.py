@@ -56,7 +56,7 @@ def evaluate(network_model,doc,best_thres=0.5):
 
         if len(target) == 0:
 
-            ana_probs.append(1.0)
+            ana_probs.append(0.0)
             coref_probs.append([])
             this_action = -1 
 
@@ -72,10 +72,10 @@ def evaluate(network_model,doc,best_thres=0.5):
             output,_ = network_model.forward(word_embedding_dimention,mention_index,mention_span,mention_feature,mention_index,mention_span,candi_index,candi_spans,pair_feature)
             output = output.data.cpu().numpy()[0]
 
-            anaphoric_prob = output[0]
+            zero_score = output[0]
             coref_prob = output[1:]
 
-            ana_probs.append(anaphoric_prob)
+            ana_probs.append(1-zero_score)
             coref_probs.append(coref_prob)
                 
             ac_list = list(coref_prob)
@@ -88,7 +88,6 @@ def evaluate(network_model,doc,best_thres=0.5):
             gold_anaphora.append(0)
         else:
             gold_anaphora.append(1)
- 
 
         if doc_end:
             ## evaluation
@@ -115,7 +114,7 @@ def evaluate(network_model,doc,best_thres=0.5):
             new_cluster_num = 0 
             for action,ana_prob,ana_gold,coref_prob in zip(action_list,ana_probs,gold_anaphora,coref_probs):
                 ## predict results: 
-                if  ana_prob > best_thres: # it is not an anphoric mention
+                if  ana_prob < best_thres: # it is not an anphoric mention
                     should_cluster = new_cluster_num
                     new_cluster_num += 1
                 else:
@@ -131,7 +130,7 @@ def evaluate(network_model,doc,best_thres=0.5):
             for action,ana_prob,ana_gold,coref_prob in zip(action_list,ana_probs,gold_anaphora,coref_probs):
             ## predict results with all things: 
 
-                ac_list = [ana_prob] + list(coref_prob)
+                ac_list = [1-ana_prob] + list(coref_prob)
                 this_action = ac_list.index(max(ac_list))
 
                 if  this_action == 0: # it is not an anphoric mention

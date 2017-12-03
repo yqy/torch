@@ -103,6 +103,7 @@ class Network(nn.Module):
         xs = self.activate(xs)
         xs = dropout_layer(xs)
 
+        #xs = self.ana_output_layer(xs)
         xs = self.ana_output_layer(xs)
 
         x = torch.cat((xs,x),1)
@@ -166,7 +167,7 @@ class Network(nn.Module):
         xs = self.ana_output_layer(xs)
         x = torch.transpose(xs,0,1)
 
-        output = F.sigmoid(x)
+        output = 1-F.sigmoid(x) # output is the probability of anaphoricty. if x is big, means a higher probability of un-anaphoric, thusthere is 1-sigmoid(x)
 
         return output,x
 

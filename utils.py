@@ -117,10 +117,10 @@ def get_prf_probs(gold,probs = None):
         for prob_thres in tuning_probs:
             new_predict = []
             for prob in probs:
-                if prob > prob_thres: # if is equls to 1, means should be classified to a zero, which is not anaphoric
-                    new_predict.append(0) # is anaphoric
+                if prob > prob_thres: # if is equls to 1 then is anaphoric
+                    new_predict.append(1) # is anaphoric
                 else:
-                    new_predict.append(1)
+                    new_predict.append(0)
         
             pr = 0
             should = 0

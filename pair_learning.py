@@ -77,7 +77,7 @@ def main():
 
 
     l2_lambda = 1e-5
-    lr = 0.0002
+    lr = 0.0009
     dropout_rate = 0.5
     shuffle = True
     times = 0
@@ -232,8 +232,9 @@ def main():
         print "Anaphoricity accuracy: %f and Fscore: %f with thresh: %f"\
                 %(best_results["accuracy"],best_results["f1"],best_results["thresh"])
         sys.stdout.flush() 
- 
-        #best_thres = Evaluate.evaluate(network_model,dev_docs,best_thres)
+
+        if (echo+1)%10 == 0:
+            best_thres = Evaluate.evaluate(network_model,dev_docs,best_results["thresh"])
 
 def get_metrics(gold, predict, thresh):
     pred = np.clip(np.floor(predict / thresh), 0, 1)
