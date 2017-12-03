@@ -36,14 +36,14 @@ if args.language == "en":
     span_dimention = 5*50
     embedding_dimention = 50
     embedding_size = 34275
-    word_embedding_dimention = 9*50
+    word_embedding_dimention = 8*50
 else:
     pair_feature_dimention = 75
     mention_feature_dimention = 23
     span_dimention = 5*64
     embedding_dimention = 64
     embedding_size = 24683
-    word_embedding_dimention = 9*64
+    word_embedding_dimention = 8*64
 
 torch.cuda.set_device(args.gpu)
  
@@ -53,6 +53,7 @@ def main():
     embedding_file = args.embedding_dir
 
     network_file = "./model/model.pkl"
+    #network_file = "./model/pretrain/network_model_pretrain.100"
     if os.path.isfile(network_file):
         print >> sys.stderr,"Read model from ./model/model.pkl"
         network_model = torch.load(network_file)
@@ -94,21 +95,25 @@ def main():
         'f1': 0.0
         }
   
-    for echo in range(200):
+    #for echo in range(100,200):
+    for echo in range(150):
 
         start_time = timeit.default_timer()
         print "Pretrain Epoch:",echo
 
-        if echo == 100:
-            lr = lr/2.0
-        if echo == 150:
-            lr = lr/2.0
+        #if echo == 100:
+        #    lr = lr/2.0
+        #if echo == 150:
+        #    lr = lr/2.0
 
         #optimizer = optim.RMSprop(filter(lambda p: p.requires_grad, network_model.parameters()), lr=lr, weight_decay=l2_lambda)
         optimizer = optim.RMSprop(network_model.parameters(), lr=lr, weight_decay=l2_lambda)
 
         pair_cost_this_turn = 0.0
         ana_cost_this_turn = 0.0
+
+        pair_nums = 0
+        ana_nums = 0
 
         pos_num = 0
         neg_num = 0
@@ -119,10 +124,6 @@ def main():
             
             mention_word_index, mention_span, candi_word_index,candi_span,feature_pair,pair_antecedents,pair_anaphors,\
             target,positive,negative,anaphoricity_word_indexs, anaphoricity_spans, anaphoricity_features, anaphoricity_target = data
-            
-            if len(positive) == 0 or len(negative) == 0:
-                continue
-        
             mention_index = autograd.Variable(torch.from_numpy(mention_word_index).type(torch.cuda.LongTensor))
             mention_span = autograd.Variable(torch.from_numpy(mention_span).type(torch.cuda.FloatTensor))
             candi_index = autograd.Variable(torch.from_numpy(candi_word_index).type(torch.cuda.LongTensor))
@@ -137,6 +138,9 @@ def main():
 
             gold = target.tolist()
             anaphoricity_gold = anaphoricity_target.tolist()
+
+            pair_nums += len(gold)
+            ana_nums += len(anaphoricity_gold)
 
             lable = autograd.Variable(torch.cuda.FloatTensor([gold]))
             ana_lable = autograd.Variable(torch.cuda.FloatTensor([anaphoricity_gold]))
@@ -158,7 +162,7 @@ def main():
             optimizer.step()
 
         end_time = timeit.default_timer()
-        print >> sys.stderr, "PreTrain",echo,"Pair total cost:",pair_cost_this_turn,"Anaphoricity total cost", ana_cost_this_turn
+        print >> sys.stderr, "PreTrain",echo,"Pair total cost:",pair_cost_this_turn/float(pair_nums),"Anaphoricity total cost", ana_cost_this_turn/float(ana_nums)
         print >> sys.stderr, "PreTRAINING Use %.3f seconds"%(end_time-start_time)
         print >> sys.stderr, "Learning Rate",lr
 
@@ -210,7 +214,7 @@ def main():
             'f1': 0.0
         }
 
-        thresh_list = [0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65]
+        thresh_list = [0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6]
         for thresh in thresh_list:
             evaluation_results = get_metrics(gold, predict, thresh)
             if evaluation_results["f1"] >= best_results["f1"]:
@@ -242,7 +246,7 @@ def main():
                 %(best_results["accuracy"],best_results["f1"],best_results["thresh"])
         sys.stdout.flush() 
 
-        if (echo+1)%10 == 0:
+        if (echo+1)%20 == 0:
             best_network_model = torch.load(model_save_dir+"network_model_pretrain.best") 
             best_thres = Evaluate.evaluate(best_network_model,dev_docs,best_results["thresh"])
 
@@ -252,7 +256,8 @@ def get_metrics(gold, predict, thresh):
     (precision_score(gold, pred), recall_score(gold, pred))
     return {
         'thresh': thresh,
-        'accuracy': accuracy_score(gold, pred),
+        #'accuracy': accuracy_score(gold, pred),
+        'accuracy': average_precision_score(gold, predict),
         'precision': p,
         'recall': r,
         'f1': 0 if p == 0 or r == 0 else 2 * p * r / (p + r)

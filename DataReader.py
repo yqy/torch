@@ -45,7 +45,7 @@ class DataGnerater():
 
     ## for mentions
         self.mention_spans = numpy.load(mention_path+"msp.npy")
-        self.mention_word_index = numpy.load(mention_path+"mw.npy") 
+        self.mention_word_index = numpy.load(mention_path+"mw.npy")[:, :-1] 
         self.mention_feature = numpy.load(mention_path+"mf.npy")
         self.mention_id = numpy.load(mention_path+"mid.npy")[:,0]
         self.mention_did = numpy.load(mention_path+"mdid.npy")[:,0]

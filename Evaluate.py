@@ -25,9 +25,9 @@ import cPickle
 sys.setrecursionlimit(1000000)
 
 if args.language == "en":
-    word_embedding_dimention = 9*50
+    word_embedding_dimention = 8*50
 else:
-    word_embedding_dimention = 9*64
+    word_embedding_dimention = 8*64
 
 torch.cuda.set_device(args.gpu)
 
