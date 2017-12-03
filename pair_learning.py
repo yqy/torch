@@ -77,7 +77,7 @@ def main():
 
 
     l2_lambda = 1e-5
-    lr = 0.0009
+    lr = 0.0002
     dropout_rate = 0.5
     shuffle = True
     times = 0
@@ -94,10 +94,15 @@ def main():
         'f1': 0.0
         }
   
-    for echo in range(100):
+    for echo in range(200):
 
         start_time = timeit.default_timer()
         print "Pretrain Epoch:",echo
+
+        if echo == 100:
+            lr = lr/2.0
+        if echo == 150:
+            lr = lr/2.0
 
         #optimizer = optim.RMSprop(filter(lambda p: p.requires_grad, network_model.parameters()), lr=lr, weight_decay=l2_lambda)
         optimizer = optim.RMSprop(network_model.parameters(), lr=lr, weight_decay=l2_lambda)
@@ -133,15 +138,17 @@ def main():
             gold = target.tolist()
             anaphoricity_gold = anaphoricity_target.tolist()
 
-            lable = autograd.Variable(torch.cuda.FloatTensor([anaphoricity_gold]))
+            lable = autograd.Variable(torch.cuda.FloatTensor([gold]))
+            ana_lable = autograd.Variable(torch.cuda.FloatTensor([anaphoricity_gold]))
 
             output,_ = network_model.forward_all_pair(word_embedding_dimention,mention_index,mention_span,candi_index,candi_spans,pair_feature,anaphors,antecedents,dropout_rate)
             ana_output,_ = network_model.forward_anaphoricity(word_embedding_dimention, anaphoricity_index, anaphoricity_span, anaphoricity_feature, dropout_rate)
 
             optimizer.zero_grad()
 
-            loss = get_pair_loss(output,positive,negative,train_docs.scale_factor)
-            ana_loss = F.binary_cross_entropy(ana_output,lable)/train_docs.anaphoricity_scale_factor
+            #loss = get_pair_loss(output,positive,negative,train_docs.scale_factor)
+            loss = F.binary_cross_entropy(output,lable,size_average=False)/train_docs.scale_factor
+            ana_loss = F.binary_cross_entropy(ana_output,ana_lable,size_average=False)/train_docs.anaphoricity_scale_factor
 
             pair_cost_this_turn += loss.data[0]
             ana_cost_this_turn += ana_loss.data[0]
@@ -193,6 +200,7 @@ def main():
         
         gold = numpy.array(gold,dtype=numpy.int32)
         predict = numpy.array(predict)
+
         best_results = {
             'thresh': 0.0,
             'accuracy': 0.0,
@@ -201,7 +209,7 @@ def main():
             'f1': 0.0
         }
 
-        thresh_list = [0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7]
+        thresh_list = [0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65]
         for thresh in thresh_list:
             evaluation_results = get_metrics(gold, predict, thresh)
             if evaluation_results["f1"] >= best_results["f1"]:
@@ -234,7 +242,8 @@ def main():
         sys.stdout.flush() 
 
         if (echo+1)%10 == 0:
-            best_thres = Evaluate.evaluate(network_model,dev_docs,best_results["thresh"])
+            best_network_model = torch.load(model_save_dir+"network_model_pretrain.best") 
+            best_thres = Evaluate.evaluate(best_network_model,dev_docs,best_results["thresh"])
 
 def get_metrics(gold, predict, thresh):
     pred = np.clip(np.floor(predict / thresh), 0, 1)
@@ -252,7 +261,8 @@ def get_pair_loss(output,pos_index,neg_index,scale_factor):
 
     pos = torch.from_numpy(pos_index).type(torch.cuda.LongTensor)
     neg = torch.from_numpy(neg_index).type(torch.cuda.LongTensor)
-    return -(torch.sum(torch.log(output[0][pos] + 1e-9))+torch.sum(torch.log(1-output[0][neg]+ 1e-9)))/scale_factor
+    #return -(torch.sum(torch.log(output[0][pos] + 1e-9))+torch.sum(torch.log(1-output[0][neg]+ 1e-9)))/scale_factor
+    return -(torch.mean(torch.log(output[0][pos] + 1e-9))+torch.mean(torch.log(1-output[0][neg]+ 1e-9)))/scale_factor
     #return -(torch.mean(torch.log(output[0][pos] + 1e-12))+torch.mean(torch.log(1-output[0][neg]+ 1e-12)))
 
 
