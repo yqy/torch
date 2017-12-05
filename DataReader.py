@@ -207,8 +207,9 @@ class DataGnerater():
 
                 rl = {}
                 rl["starts"] = numpy.array(starts,dtype='int32')
-                rl["ends"] = numpy.array(starts,dtype='int32')
+                rl["ends"] = numpy.array(ends,dtype='int32')
                 rl["did"] = did
+                rl["reindex"] = reindex
 
                 self.batch.append( (mentions,antecedents,anaphors,
                             pairs,pair_antecedents,pair_anaphors,
@@ -320,7 +321,7 @@ class DataGnerater():
             EST = total_num*estimate_time/float(done_num)
             print >> sys.stderr, "Total use %.3f seconds for doc %d with %d mentions (%d/%d) -- EST:%f , Left:%f"%(end_time-start_time,did,me - ms,done_num,total_num,EST,EST-estimate_time)
 
-    def train_generater(self,filter_num=700,shuffle=False,batch_size=10000,top=False):
+    def train_generater(self,filter_num=700,batch_size=10000,shuffle=False,top=False,reinforce=False):
 
         if shuffle:
             numpy.random.shuffle(self.batch) 
@@ -333,6 +334,8 @@ class DataGnerater():
             done_num += 1
             candi_word_index_return = self.mention_word_index[mentions[0]:mentions[-1]+1][antecedents]
             candi_span_return = self.mention_spans[mentions[0]:mentions[-1]+1][antecedents]
+            candi_ids_return = self.mention_id[mentions[0]:mentions[-1]+1][antecedents]
+
             mention_word_index_return = self.mention_word_index[mentions[0]:mentions[-1]+1][anaphors]
             mention_span_return = self.mention_spans[mentions[0]:mentions[-1]+1][anaphors]
 
@@ -351,6 +354,10 @@ class DataGnerater():
                 yield mention_word_index_return, mention_span_return, candi_word_index_return,candi_span_return,\
                 pair_features_return,pair_antecedents,pair_anaphors,pair_target_return,positive,negative,\
                 anaphoricity_word_index, anaphoricity_span, anaphoricity_feature, anaphoricity_target,top_x
+            elif reinforce == True:
+                yield mention_word_index_return, mention_span_return, candi_word_index_return,candi_span_return,\
+                pair_features_return,pair_antecedents,pair_anaphors,pair_target_return,positive,negative,\
+                anaphoricity_word_index, anaphoricity_span, anaphoricity_feature, anaphoricity_target,rl,candi_ids_return
             else:
                 yield mention_word_index_return, mention_span_return, candi_word_index_return,candi_span_return,\
                 pair_features_return,pair_antecedents,pair_anaphors,pair_target_return,positive,negative,\
