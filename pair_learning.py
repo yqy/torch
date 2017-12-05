@@ -52,8 +52,8 @@ def main():
     DIR = args.DIR
     embedding_file = args.embedding_dir
 
-    network_file = "./model/model.pkl"
-    #network_file = "./model/pretrain/network_model_pretrain.30"
+    #network_file = "./model/model.pkl"
+    network_file = "./model/pretrain/network_model_pretrain.20"
     if os.path.isfile(network_file):
         print >> sys.stderr,"Read model from ./model/model.pkl"
         network_model = torch.load(network_file)
@@ -78,7 +78,7 @@ def main():
 
 
     l2_lambda = 1e-6
-    lr = 0.0005
+    lr = 0.0002
     dropout_rate = 0.5
     shuffle = True
     times = 0
@@ -96,7 +96,7 @@ def main():
         }
   
     #for echo in range(30,200):
-    for echo in range(150):
+    for echo in range(20,150):
 
         start_time = timeit.default_timer()
         print "Pretrain Epoch:",echo

@@ -205,9 +205,14 @@ class DataGnerater():
                 top["ends"] = np.concatenate([pos_ends, positive.size + neg_ends])
                 top["top_gold"] = np.concatenate([np.ones(pos_starts.size),np.zeros(neg_starts.size)])
 
+                rl = {}
+                rl["starts"] = numpy.array(starts,dtype='int32')
+                rl["ends"] = numpy.array(starts,dtype='int32')
+                rl["did"] = did
+
                 self.batch.append( (mentions,antecedents,anaphors,
                             pairs,pair_antecedents,pair_anaphors,
-                            numpy.array(anaphoricities),positive,negative,top) )
+                            numpy.array(anaphoricities),positive,negative,top,rl) )
 
                 min_anaphor = max_anaphor
                 min_pair = max_pair
@@ -323,7 +328,7 @@ class DataGnerater():
         done_num = 0
         total_num = len(self.batch)
         estimate_time = 0.0
-        for mentions,antecedents,anaphors,pairs,pair_antecedents,pair_anaphors,anaphoricities,positive,negative,top_x in self.batch:
+        for mentions,antecedents,anaphors,pairs,pair_antecedents,pair_anaphors,anaphoricities,positive,negative,top_x,rl in self.batch:
             start_time = timeit.default_timer() 
             done_num += 1
             candi_word_index_return = self.mention_word_index[mentions[0]:mentions[-1]+1][antecedents]
