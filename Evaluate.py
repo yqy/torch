@@ -69,7 +69,7 @@ def evaluate(network_model,doc,best_thres=0.5):
             candi_spans = autograd.Variable(torch.from_numpy(candi_span).type(torch.cuda.FloatTensor))
             pair_feature = autograd.Variable(torch.from_numpy(pair_feature_array).type(torch.cuda.FloatTensor))
 
-            output,_ = network_model.forward(word_embedding_dimention,mention_index,mention_span,mention_feature,mention_index,mention_span,candi_index,candi_spans,pair_feature)
+            output,_ = network_model.forward(word_embedding_dimention,mention_index,mention_span,mention_feature,mention_index,mention_span,candi_index,candi_spans,pair_feature,0.0)
             output = output.data.cpu().numpy()[0]
 
             zero_score = output[0]
@@ -177,14 +177,15 @@ def Output_Result(doc4test):
     
 if __name__ == "__main__":
 
-    network_file = "./model/pretrain/network_model_pretrain.best"
+    #network_file = "./model/pretrain/network_model_pretrain.best"
+    network_file = "./model/pretrain/network_model_pretrain.top.best"
     #network_file = "./model/model.pkl"
     print >> sys.stderr,"Read model from ./model/model.pkl"
     network_model = torch.load(network_file)
 
     dev_docs = DataReader.DataGnerater("dev")
 
-    best_thres = 0.35
+    best_thres = 0.4
 
     best_thres = evaluate(network_model,dev_docs,best_thres)
 

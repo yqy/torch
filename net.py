@@ -25,7 +25,7 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
-torch.manual_seed(1234)
+torch.manual_seed(0)
 
 class Network(nn.Module):
 
@@ -61,26 +61,34 @@ class Network(nn.Module):
     def forward(self, word_embedding_rep_dimention, ana_word_index, ana_span, ana_feature, mention_word_index, mention_span, candi_word_index, candi_span, pair_feature, dropout=0.0):
 
         dropout_layer = nn.Dropout(dropout)
-
+        
+        self.parameters = []
+    
         mention_word_embedding = self.embedding_layer(mention_word_index).view(-1,word_embedding_rep_dimention)
-        mention_embedding_rep = dropout_layer(self.mention_word_layer(mention_word_embedding))
+        mention_word_embedding = dropout_layer(mention_word_embedding)
+        mention_embedding_rep = self.mention_word_layer(mention_word_embedding)
         mention_span_rep = self.mention_span_layer(mention_span)
 
+        self.parameters.append(self.mention_span_layer.parameters())
+
         candi_word_embedding = self.embedding_layer(candi_word_index).view(-1,word_embedding_rep_dimention)
-        candi_embedding_rep = dropout_layer(self.candi_word_layer(candi_word_embedding))
+        candi_word_embedding = dropout_layer(candi_word_embedding)
+        candi_embedding_rep = self.candi_word_layer(candi_word_embedding)
         candi_span_rep = self.candi_span_layer(candi_span)
 
         pair_feature_rep = self.pair_feature_layer(pair_feature)
 
         inpt = mention_embedding_rep + mention_span_rep + candi_embedding_rep + candi_span_rep + pair_feature_rep
+        inpt = self.activate(inpt)
 
         x = dropout_layer(inpt)
         x = self.hidden_layer_1(x)
         x = self.activate(x)
-        x = dropout_layer(x)
 
+        x = dropout_layer(x)
         x = self.hidden_layer_2(x)
         x = self.activate(x)
+
         x = dropout_layer(x)
         x = torch.transpose(self.output_layer(x),0,1)
 
@@ -88,22 +96,23 @@ class Network(nn.Module):
         #ana_word_embedding = self.embedding_layer(ana_word_index).view(-1,word_embedding_rep_dimention)
         #ana_embedding_rep = self.ana_word_layer(ana_word_embedding)
         #ana_span_rep = self.ana_span_layer(ana_span)
+
         ana_embedding_rep = dropout_layer(self.ana_word_layer(mention_word_embedding))
         ana_span_rep = self.ana_span_layer(mention_span)
         ana_feature_rep = self.ana_feature_layer(ana_feature)
 
         ana_input = ana_embedding_rep + ana_span_rep + ana_feature_rep
-        xs = dropout_layer(ana_input)
+        ana_input = self.activate(ana_input)
 
+        xs = dropout_layer(ana_input)
         xs = self.ana_hidden_layer_1(xs)
         xs = self.activate(xs)
-        xs = dropout_layer(xs)
 
+        xs = dropout_layer(xs)
         xs = self.ana_hidden_layer_2(xs)
         xs = self.activate(xs)
-        xs = dropout_layer(xs)
 
-        #xs = self.ana_output_layer(xs)
+        xs = dropout_layer(xs)
         xs = self.ana_output_layer(xs)
 
         x = torch.cat((xs,x),1)
@@ -116,18 +125,25 @@ class Network(nn.Module):
     def forward_all_pair(self, word_embedding_rep_dimention, mention_word_index, mention_span, candi_word_index, candi_span, pair_feature, anaphors, antecedents, dropout=0.0):
 
         dropout_layer = nn.Dropout(dropout)
+        #factor = 1.0/(1.0-dropout)
+        factor = 1.0
 
         mention_word_embedding = self.embedding_layer(mention_word_index).view(-1,word_embedding_rep_dimention)
-        mention_embedding_rep = dropout_layer(self.mention_word_layer(mention_word_embedding))
-        mention_span_rep = self.mention_span_layer(mention_span)
+        mention_word_embedding = dropout_layer(mention_word_embedding[anaphors])
+        mention_embedding_rep = self.mention_word_layer(mention_word_embedding)
+
+        mention_span_rep = self.mention_span_layer(mention_span)[anaphors]
 
         candi_word_embedding = self.embedding_layer(candi_word_index).view(-1,word_embedding_rep_dimention)
-        candi_embedding_rep = dropout_layer(self.candi_word_layer(candi_word_embedding))
-        candi_span_rep = self.candi_span_layer(candi_span)
+        candi_word_embedding = dropout_layer(candi_word_embedding[antecedents])
+        candi_embedding_rep = self.candi_word_layer(candi_word_embedding)
+
+        candi_span_rep = self.candi_span_layer(candi_span)[antecedents]
 
         pair_feature_rep = self.pair_feature_layer(pair_feature)
 
-        inpt = mention_embedding_rep[anaphors] + mention_span_rep[anaphors] + candi_embedding_rep[antecedents] + candi_span_rep[antecedents] + pair_feature_rep
+        inpt = mention_embedding_rep + mention_span_rep + candi_embedding_rep + candi_span_rep + pair_feature_rep
+        inpt = self.activate(inpt)
 
         x = dropout_layer(inpt)
         x = self.hidden_layer_1(x)
@@ -147,23 +163,28 @@ class Network(nn.Module):
     def forward_anaphoricity(self, word_embedding_rep_dimention, word_index, span, feature, dropout=0.0):
 
         dropout_layer = nn.Dropout(dropout)
+        #factor = 1.0/(1.0-dropout)
+        factor = 1.0
 
         anaphoricity_word_embedding = self.embedding_layer(word_index).view(-1,word_embedding_rep_dimention)
+        anaphoricity_word_embedding = dropout_layer(anaphoricity_word_embedding)
         anaphoricity_embedding_rep = self.ana_word_layer(anaphoricity_word_embedding)
+
         anaphoricity_span_rep = self.ana_span_layer(span)
         anaphoricity_feature_rep = self.ana_feature_layer(feature)
 
         ana_input = anaphoricity_embedding_rep + anaphoricity_span_rep + anaphoricity_feature_rep
-        xs = dropout_layer(ana_input)
+        ana_input = self.activate(ana_input)
 
+        xs = dropout_layer(ana_input)
         xs = self.ana_hidden_layer_1(xs)
         xs = self.activate(xs)
-        xs = dropout_layer(xs)
 
+        xs = dropout_layer(xs)
         xs = self.ana_hidden_layer_2(xs)
         xs = self.activate(xs)
-        xs = dropout_layer(xs)
 
+        xs = dropout_layer(xs)
         xs = self.ana_output_layer(xs)
         x = torch.transpose(xs,0,1)
 
@@ -171,6 +192,48 @@ class Network(nn.Module):
 
         return output,x
 
+    def forward_top_pair(self, word_embedding_rep_dimention, mention_word_index, mention_span, candi_word_index, candi_span, pair_feature, anaphors, antecedents, reindex, starts, ends, dropout=0.0):
+
+        dropout_layer = nn.Dropout(dropout)
+        #factor = 1.0/(1.0-dropout)
+        factor = 1.0
+
+        mention_word_embedding = self.embedding_layer(mention_word_index).view(-1,word_embedding_rep_dimention)
+        mention_word_embedding = dropout_layer(mention_word_embedding[anaphors])
+        mention_embedding_rep = self.mention_word_layer(mention_word_embedding)
+
+        mention_span_rep = self.mention_span_layer(mention_span)[anaphors]
+
+        candi_word_embedding = self.embedding_layer(candi_word_index).view(-1,word_embedding_rep_dimention)
+        candi_word_embedding = dropout_layer(candi_word_embedding[antecedents])
+        candi_embedding_rep = self.candi_word_layer(candi_word_embedding)
+
+        candi_span_rep = self.candi_span_layer(candi_span)[antecedents]
+
+        pair_feature_rep = self.pair_feature_layer(pair_feature)
+
+        inpt = mention_embedding_rep + mention_span_rep + candi_embedding_rep + candi_span_rep + pair_feature_rep
+        inpt = self.activate(inpt)
+
+        x = dropout_layer(inpt)
+        x = self.hidden_layer_1(x)
+        x = self.activate(x)
+
+        x = dropout_layer(x)
+        x = self.hidden_layer_2(x)
+        x = self.activate(x)
+
+        x = dropout_layer(x)
+        x = self.output_layer(x)
+
+        output = F.sigmoid(x)
+        output_reindex = output[reindex]
+
+        max_output = []
+        for i in range(len(starts)):
+            max_output.append(torch.max(output_reindex[starts[i].data[0]:ends[i].data[0]]))
+
+        return torch.cat(max_output),output[reindex]
 
 
 def main():
