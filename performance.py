@@ -48,7 +48,7 @@ else:
 
 torch.cuda.set_device(args.gpu)
  
-def performance(doc):
+def performance(doc,network_model):
 
     test_document = []
 
@@ -124,4 +124,4 @@ if __name__ == "__main__":
     dev_docs = DataReader.DataGnerater("dev"+reduced)
     #test_docs = DataReader.DataGnerater("test"+reduced)
 
-    performance(dev_docs)
+    performance(dev_docs,network_model)
