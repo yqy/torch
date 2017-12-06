@@ -10,6 +10,7 @@ import cPickle
 import json
 
 from conf import *
+import utils
 
 MENTION_TYPES = {
     "PRONOMINAL": 0,
@@ -69,6 +70,7 @@ class DataGnerater():
         self.doc_mentions = numpy.load(doc_path + 'dmi.npy') # each line is the mention_start_index -- mention_end_index
 
         self.batch = []
+        self.doc_batch = {}
         # build training data  
         doc_index = range(self.doc_pairs.shape[0])
         done_num = 0
@@ -82,6 +84,8 @@ class DataGnerater():
             ps, pe = self.doc_pairs[did]
             ms, me = self.doc_mentions[did]
             self.n_anaphors += me - ms
+
+            self.doc_batch[did] = []
             
             done_num += 1
 
@@ -170,22 +174,21 @@ class DataGnerater():
                         j += 1
                         ana_reindex.append(pair_pos)
                         pair_pos += 1
-                        i += 1
-                        ana_reindex.append(anaphor_pos)
-                        anaphor_pos += 1
+                    i += 1
+                    ana_reindex.append(anaphor_pos)
+                    anaphor_pos += 1
+
                     end = i 
                     ana_labels = np.array(ana_labels)
                     anaphoric = ana_labels.sum() > 0 
-                    if end > start + 1:
+                    if end > (start + 1):
                         starts.append(start)
                         ends.append(end)
                         reindex += ana_reindex
-                        #self.n_anaphoric_anaphors += 1
                     else:
                         i = start
                         continue 
 
-                reindex = np.array(reindex, dtype='int32')
 
                 positive = numpy.array(positive,dtype='int32')
                 negative = numpy.array(negative,dtype='int32')
@@ -193,6 +196,7 @@ class DataGnerater():
                 pos_ends = np.array(pos_ends, dtype='int32')
                 neg_starts = np.array(neg_starts, dtype='int32')
                 neg_ends = np.array(neg_ends, dtype='int32')
+                reindex = np.array(reindex, dtype='int32')
 
                 #print "score_index",np.concatenate([positive, negative])[:, np.newaxis]
                 #print "starts",np.concatenate([pos_starts, positive.size + neg_starts])[:, np.newaxis]
@@ -214,6 +218,11 @@ class DataGnerater():
                 self.batch.append( (mentions,antecedents,anaphors,
                             pairs,pair_antecedents,pair_anaphors,
                             numpy.array(anaphoricities),positive,negative,top,rl) )
+
+                self.doc_batch[did].append( (mentions,antecedents,anaphors,
+                            pairs,pair_antecedents,pair_anaphors,
+                            numpy.array(anaphoricities),positive,negative,top,rl) )
+
 
                 min_anaphor = max_anaphor
                 min_pair = max_pair
@@ -368,6 +377,57 @@ class DataGnerater():
             EST = total_num*estimate_time/float(done_num)
             print >> sys.stderr, "Total use %.3f seconds for %d/%d -- EST:%f , Left:%f"%(end_time-start_time,done_num,total_num,EST,EST-estimate_time)
 
+    def rl_case_generater(self,shuffle=False):
+
+        index_list = range(len(self.doc_batch.keys()))
+
+        if shuffle:
+            random.shuffle(index_list) 
+
+        done_num = 0
+        total_num = len(self.doc_batch)
+        estimate_time = 0.0
+
+        for did_index in index_list:
+            start_time = timeit.default_timer() 
+            did = self.doc_batch.keys()[did_index]
+            done_num += 1
+            
+            i = 0
+            for mentions,antecedents,anaphors,pairs,pair_antecedents,pair_anaphors,anaphoricities,positive,negative,top_x,rl in self.doc_batch[did]:
+                i += 1
+
+                candi_word_index_return = self.mention_word_index[mentions[0]:mentions[-1]+1][antecedents]
+                candi_span_return = self.mention_spans[mentions[0]:mentions[-1]+1][antecedents]
+                candi_ids_return = self.mention_id[mentions[0]:mentions[-1]+1]
+            
+                mention_word_index_return = self.mention_word_index[mentions[0]:mentions[-1]+1][anaphors]
+                mention_span_return = self.mention_spans[mentions[0]:mentions[-1]+1][anaphors]
+
+                pair_features_return = self.mention_pair_feature[pairs[0]:pairs[-1]+1]
+                pair_target_return = self.pair_coref_info[pairs[0]:pairs[-1]+1].astype(int)
+
+
+                anaphoricity_word_index = mention_word_index_return
+                anaphoricity_span = mention_span_return
+                anaphoricity_target = anaphoricities
+                anaphoricity_feature = self.mention_feature_arrays[mentions[0]:mentions[-1]+1][anaphors]
+
+                assert len(anaphoricities) == len(anaphoricity_feature)
+                assert len(anaphoricities) == len(anaphoricity_span)
+
+                rl["end"] = False
+                if i == len(self.doc_batch[did]):
+                    rl["end"] = True
+
+                yield mention_word_index_return, mention_span_return, candi_word_index_return,candi_span_return,\
+                pair_features_return,pair_antecedents,pair_anaphors,pair_target_return,positive,negative,\
+                anaphoricity_word_index, anaphoricity_span, anaphoricity_feature, anaphoricity_target,rl,candi_ids_return
+            
+            end_time = timeit.default_timer()
+            estimate_time += (end_time-start_time)
+            EST = total_num*estimate_time/float(done_num)
+            print >> sys.stderr, "Total use %.3f seconds for %d/%d -- EST:%f , Left:%f"%(end_time-start_time,done_num,total_num,EST,EST-estimate_time)
 
 def new_max_anaphor(n, k): 
     # find m such that sum from i=n to m-1 is < k
