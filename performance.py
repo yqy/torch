@@ -106,15 +106,15 @@ def performance(doc):
     metrics = Evaluate.Output_Result(test_document)
     r,p,f = metrics["muc"]
     print "MUC: recall: %f precision: %f  f1: %f"%(r,p,f)
-    r,p,f = metrics["muc"]
+    r,p,f = metrics["b3"]
     print "B3: recall: %f precision: %f  f1: %f"%(r,p,f)
-    r,p,f = metrics["muc"]
+    r,p,f = metrics["ceaf"]
     print "CEAF: recall: %f precision: %f  f1: %f"%(r,p,f)
 
 if __name__ == "__main__":
     DIR = args.DIR
     #network_file = "./model/model.pkl"
-    network_file = "./model/pretrain/network_model_pretrain.best"
+    network_file = "./model/pretrain/network_model_pretrain.50.top"
     network_model = torch.load(network_file)
 
     reduced=""
