@@ -115,12 +115,7 @@ if __name__ == "__main__":
     DIR = args.DIR
     #network_file = "./model/model.pkl"
     network_file = "./model/pretrain/network_model_pretrain.best"
-    if os.path.isfile(network_file):
-        print >> sys.stderr,"Read model from ./model/model.pkl"
-        network_model = torch.load(network_file)
-    else:
-        "hehe"
-        return
+    network_model = torch.load(network_file)
 
     reduced=""
     if args.reduced == 1:
