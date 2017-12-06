@@ -169,11 +169,16 @@ def evaluate(network_model,doc,best_thres=0.5):
 
 def Output_Result(doc4test):
     mp,mr,mf = evaluation.evaluate_documents(doc4test,evaluation.muc)
-    print "MUC: recall: %f precision: %f  f1: %f"%(mr,mp,mf)
+    #print "MUC: recall: %f precision: %f  f1: %f"%(mr,mp,mf)
     bp,br,bf = evaluation.evaluate_documents(doc4test,evaluation.b_cubed)
-    print "BCUBED: recall: %f precision: %f  f1: %f"%(br,bp,bf)
+    #print "BCUBED: recall: %f precision: %f  f1: %f"%(br,bp,bf)
     cp,cr,cf = evaluation.evaluate_documents(doc4test,evaluation.ceafe)
-    print "CEAF: recall: %f precision: %f  f1: %f"%(cr,cp,cf)
+    #print "CEAF: recall: %f precision: %f  f1: %f"%(cr,cp,cf)
+    metrics = {}
+    metrics["muc"] = (mr,mp,mf)
+    metrics["b3"] = (br,bp,bf)
+    metrics["ceaf"] = (cr,cp,cf)
+    return metrics
     
 if __name__ == "__main__":
 
@@ -183,7 +188,8 @@ if __name__ == "__main__":
     print >> sys.stderr,"Read model from ./model/model.pkl"
     network_model = torch.load(network_file)
 
-    dev_docs = DataReader.DataGnerater("dev")
+    #dev_docs = DataReader.DataGnerater("dev")
+    dev_docs = DataReader.DataGnerater("test")
 
     best_thres = 0.4
 
