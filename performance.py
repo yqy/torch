@@ -113,7 +113,6 @@ def performance(doc,network_model):
 
 if __name__ == "__main__":
     DIR = args.DIR
-    #network_file = "./model/model.pkl"
     network_file = "./model/pretrain/network_model_pretrain.50.top"
     network_model = torch.load(network_file)
 
