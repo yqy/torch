@@ -156,11 +156,14 @@ def evaluate(network_model,doc,best_thres=0.5):
     best_thres = thred
 
     print "Test on ALL classfication"  
-    Output_Result(all_docs_for_test)
+    m = Output_Result(all_docs_for_test)
+    print_performance(m)
     print "Test on GOLD anaphor"  
-    Output_Result(gold_docs_for_test)
+    m = Output_Result(gold_docs_for_test)
+    print_performance(m)
     print "Test on PREDICT anaphor"  
-    Output_Result(docs_for_test)
+    m = Output_Result(docs_for_test)
+    print_performance(m)
 
     print "#################################################" 
     sys.stdout.flush()
@@ -179,7 +182,14 @@ def Output_Result(doc4test):
     metrics["b3"] = (br,bp,bf)
     metrics["ceaf"] = (cr,cp,cf)
     return metrics
-    
+def print_performance(m):
+    mp,mr,mf = m["muc"]
+    print "MUC: recall: %f precision: %f  f1: %f"%(mr,mp,mf)
+    bp,br,bf = m["b3"]
+    print "BCUBED: recall: %f precision: %f  f1: %f"%(br,bp,bf)
+    cp,cr,cf = m["ceaf"]
+    print "CEAF: recall: %f precision: %f  f1: %f"%(cr,cp,cf)
+     
 if __name__ == "__main__":
 
     #network_file = "./model/pretrain/network_model_pretrain.best"
