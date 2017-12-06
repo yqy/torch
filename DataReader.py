@@ -161,6 +161,7 @@ class DataGnerater():
                 #print anaphoricities
 
                 starts, ends = [], []
+                costs = []
                 reindex = []
                 pair_pos, anaphor_pos = 0, len(pairs)
                 i, j = 0, 0
@@ -189,6 +190,15 @@ class DataGnerater():
                         i = start
                         continue 
 
+                    WL = 1.0
+                    FL = 0.4
+                    FN = 0.8
+
+                    if anaphoric:
+                        ana_costs = np.append(WL * (ana_labels ^ 1), FN)
+                    else:
+                        ana_costs = np.append(FL * np.ones_like(ana_labels), 0)
+                    costs += list(ana_costs)
 
                 positive = numpy.array(positive,dtype='int32')
                 negative = numpy.array(negative,dtype='int32')
@@ -197,6 +207,7 @@ class DataGnerater():
                 neg_starts = np.array(neg_starts, dtype='int32')
                 neg_ends = np.array(neg_ends, dtype='int32')
                 reindex = np.array(reindex, dtype='int32')
+                costs = np.array([costs], dtype='float')
 
                 #print "score_index",np.concatenate([positive, negative])[:, np.newaxis]
                 #print "starts",np.concatenate([pos_starts, positive.size + neg_starts])[:, np.newaxis]
@@ -214,6 +225,7 @@ class DataGnerater():
                 rl["ends"] = numpy.array(ends,dtype='int32')
                 rl["did"] = did
                 rl["reindex"] = reindex
+                rl["costs"] = costs
 
                 self.batch.append( (mentions,antecedents,anaphors,
                             pairs,pair_antecedents,pair_anaphors,

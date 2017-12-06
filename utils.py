@@ -19,8 +19,9 @@ random.seed(args.random_seed)
 
 def sample_action(action_probability):
     
-    ac = list(action_probability)
-    ac = numpy.array(ac)
+    #ac = list(action_probability)
+    #ac = numpy.array(ac)
+    ac = action_probability
     ac = ac/ac.sum()
     action = numpy.random.choice(numpy.arange(len(ac)),p=ac)
     return action
@@ -64,34 +65,33 @@ def get_reward_average(cluster_info,gold_info,max_cluster_num,index,max_cluster_
     return f
 
 
-def get_reward_trick(cluster_info,gold_dict,max_cluster_num):
+def get_reward_trick(cluster_info,gold_dict,new_cluster_info,action_list,candi_ids):
 
-    this_cluster = cluster_info[-1]
-    this_index = len(cluster_info)-1
+    award_list = []
 
-    if this_index in gold_dict:
-        if this_cluster == (max_cluster_num-1): # it is a new cluster
-            reward = 1.0
-            for ids in gold_dict[this_index]:
-                if ids < this_index:
-                    reward = -1
-                    break
-        else:
-            anc_index = 0
-            for i in range(len(cluster_info)-1):
-                if cluster_info[i] == this_cluster:
-                    anc_index = i
-            if anc_index in gold_dict[this_index]:
-                reward = 1.0
+    for i in range(1,len(cluster_info)):
+        this_cluster = cluster_info[i]
+        this_candi_id = candi_ids[i]
+        this_action = action_list[i-1]
+        new_cluster = new_cluster_info[i-1]
+
+        if this_candi_id in gold_dict: # should not be a new one
+            if new_cluster == 1:
+                this_award = -1
             else:
-                reward = -1.0
-            
-    else: # it should be a new cluster
-        if this_cluster == (max_cluster_num-1):
-            reward = 1.0
-        else:
-            reward = -1.0
-    return reward*0.5
+                if candi_ids[this_action] in gold_dict[this_candi_id]:
+                    this_award = 1
+                else:
+                    this_award = -1
+        else: # should be a new
+            if new_cluster == 1:
+                this_award = 1
+            else:
+                this_award = -1
+        award_list.append(this_award)
+
+    return award_list
+         
 
 def get_evaluation_document(cluster_info,gold_info,doc_ids,max_cluster_num):
     predict = []
