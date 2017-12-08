@@ -95,10 +95,15 @@ def write_pair_feature_data(file_name):
             
             pair_feature_array = []
             for j in range(i):
-                dis_feature = get_distance_features(mention_feature_list[i],mention_feature_list[j])
+                #dis_feature = get_distance_features(mention_feature_list[i],mention_feature_list[j])
+                dis_feature = get_distance_features(mention_feature_indoc[i],mention_feature_indoc[j])
                 this_pair_feature = pair_feature_indoc[pair_feature_index] 
                 pair_feature_index += 1
-                feature4this = numpy.concatenate((dis_feature,this_pair_feature,mention_feature_list[i],mention_feature_list[j]))
+                #feature4this = numpy.concatenate((dis_feature,this_pair_feature,mention_feature_list[i],mention_feature_list[j]))
+                #print this_pair_feature
+                feature4this = numpy.concatenate((this_pair_feature,dis_feature,mention_feature_list[i][:-7],mention_feature_list[j]))
+                #print len(feature4this),feature4this
+            
                 pair_feature_list.append(feature4this)
                 #pair_feature_array.append(feature4this)
             #if len(pair_feature_array) == 0:
@@ -117,7 +122,7 @@ def write_pair_feature_data(file_name):
     mention_feature_arrays = numpy.array(mention_feature_arrays,dtype="float32")
 
     numpy.save(mention_path+"yqy.npy",pair_feature_list)
-    numpy.save(mention_path+"mfyqy.npy",mention_feature_arrays)
+    #numpy.save(mention_path+"mfyqy.npy",mention_feature_arrays)
     
 def get_mention_features(mention_features, doc_mention_size,document_features):
     features = numpy.array([])
@@ -128,10 +133,12 @@ def get_mention_features(mention_features, doc_mention_size,document_features):
     features = numpy.append(features,document_features)
     return features
 
-def get_distance_features(m1, m2):
-    dis_f = numpy.array(int((m2[SENTENCE_NUM] == m1[SENTENCE_NUM]) & (m1[END_INDEX] > m2[START_INDEX])))
-    dis_f = numpy.append(dis_f,distance(m2[SENTENCE_NUM] - m1[SENTENCE_NUM]))
+def get_distance_features(m2, m1):
+    dis_f = numpy.array(distance(m2[SENTENCE_NUM] - m1[SENTENCE_NUM]))
     dis_f = numpy.append(dis_f,distance(np.subtract(m2[MENTION_NUM] - m1[MENTION_NUM], 1)))
+    dis_f = numpy.append(dis_f,int((m2[SENTENCE_NUM] == m1[SENTENCE_NUM]) & (m1[END_INDEX] > m2[START_INDEX])))
+    #print m1[MENTION_NUM],m2[MENTION_NUM]
+    #print np.subtract(m1[MENTION_NUM] - m2[MENTION_NUM], 1)
     return dis_f
 
 
@@ -157,11 +164,11 @@ def distance(a):
 
 if __name__ == "__main__":
     #main()
-    write_pair_feature_data("test_reduced")
+    #write_pair_feature_data("test_reduced")
     write_pair_feature_data("dev_reduced")
-    write_pair_feature_data("train_reduced")
+    #write_pair_feature_data("train_reduced")
 
-    write_pair_feature_data("test")
-    write_pair_feature_data("train")
-    write_pair_feature_data("dev")
+    #write_pair_feature_data("test")
+    #write_pair_feature_data("train")
+    #write_pair_feature_data("dev")
     print "Done!" 
