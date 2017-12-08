@@ -47,25 +47,31 @@ else:
     word_embedding_dimention = 8*64
 
 torch.cuda.set_device(args.gpu)
+
+def net_copy(net,copy_from_net):
+    mcp = list(net.parameters())
+    mp = list(copy_from_net.parameters())
+    n = len(mcp)
+    for i in range(0, n): 
+        mcp[i].data[:] = mp[i].data[:]
  
 def main():
 
     DIR = args.DIR
     embedding_file = args.embedding_dir
 
-    network_file = "./model/pretrain/network_model_pretrain.best"
-    #network_file = "./model/pretrain/network_model_pretrain.30"
-    if os.path.isfile(network_file):
-        print >> sys.stderr,"Read model from ./model/model.pkl"
-        network_model = torch.load(network_file)
-    else:
-        embedding_matrix = numpy.load(embedding_file)
-        #print len(embedding_matrix)
+    best_network_file = "./model/pretrain/network_model_pretrain.best"
+    print >> sys.stderr,"Read model from ./model/model.pkl"
+    best_network_model = torch.load(best_network_file)
+        
+    embedding_matrix = numpy.load(embedding_file)
 
-        "Building torch model"
-        network_model = network.Network(pair_feature_dimention,mention_feature_dimention,word_embedding_dimention,span_dimention,1000,embedding_size,embedding_dimention,embedding_matrix).cuda()
-        print >> sys.stderr,"save model ..."
-        torch.save(network_model,network_file)
+    "Building torch model"
+    network_model = network.Network(pair_feature_dimention,mention_feature_dimention,word_embedding_dimention,span_dimention,1000,embedding_size,embedding_dimention,embedding_matrix).cuda()
+    print >> sys.stderr,"save model ..."
+    torch.save(network_model,network_file)
+
+    net_copy(network_model,best_network_model)
 
     reduced=""
     if args.reduced == 1:
