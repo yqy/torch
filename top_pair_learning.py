@@ -69,7 +69,7 @@ def main():
     "Building torch model"
     network_model = network.Network(pair_feature_dimention,mention_feature_dimention,word_embedding_dimention,span_dimention,1000,embedding_size,embedding_dimention,embedding_matrix).cuda()
     print >> sys.stderr,"save model ..."
-    torch.save(network_model,network_file)
+    #torch.save(network_model,network_file)
 
     net_copy(network_model,best_network_model)
 
