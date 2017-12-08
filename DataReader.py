@@ -484,7 +484,7 @@ def distance(a):
 
 if __name__ == "__main__":
     #data = DataGnerater("test_reduced")   
-    data = DataGnerater("train")   
+    data = DataGnerater("dev_reduced")   
     data.train_generater()
     for t in data.train_generater():
         mention_word_index_return, mention_span_return, candi_word_index_return,candi_span_return,pair_features_return,pair_antecedents,pair_anaphors,target,positive,negative,anaphoricity_word_index, anaphoricity_span, anaphoricity_feature, anaphoricity_target = t

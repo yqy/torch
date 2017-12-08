@@ -24,6 +24,7 @@ import evaluation
 #import network
 import net as network
 import Evaluate
+import performance
 
 import cPickle
 sys.setrecursionlimit(1000000)
@@ -31,7 +32,7 @@ sys.setrecursionlimit(1000000)
 print >> sys.stderr, os.getpid()
 
 if args.language == "en":
-    pair_feature_dimention = 77
+    pair_feature_dimention = 70
     mention_feature_dimention = 24
     span_dimention = 5*50
     embedding_dimention = 50
@@ -52,8 +53,8 @@ def main():
     DIR = args.DIR
     embedding_file = args.embedding_dir
 
-    #network_file = "./model/model.pkl"
-    network_file = "./model/pretrain/network_model_pretrain.20"
+    network_file = "./model/model.pkl"
+    #network_file = "./model/pretrain/network_model_pretrain.50"
     if os.path.isfile(network_file):
         print >> sys.stderr,"Read model from ./model/model.pkl"
         network_model = torch.load(network_file)
@@ -78,7 +79,7 @@ def main():
 
 
     l2_lambda = 1e-6
-    lr = 0.0002
+    lr = 0.002
     dropout_rate = 0.5
     shuffle = True
     times = 0
@@ -96,7 +97,7 @@ def main():
         }
   
     #for echo in range(30,200):
-    for echo in range(20,150):
+    for echo in range(50):
 
         start_time = timeit.default_timer()
         print "Pretrain Epoch:",echo
@@ -247,9 +248,13 @@ def main():
                 %(best_results["accuracy"],best_results["f1"],best_results["thresh"])
         sys.stdout.flush() 
 
-        if (echo+1)%30 == 0:
+        if (echo+1)%10 == 0:
             best_network_model = torch.load(model_save_dir+"network_model_pretrain.best") 
-            best_thres = Evaluate.evaluate(best_network_model,dev_docs,best_results["thresh"])
+            print "DEV:"
+            performance.performance(dev_docs,best_network_model)
+            print "TEST:"
+            performance.performance(test_docs,best_network_model)
+
     ## output best
     print "In sum, anaphoricity accuracy: %f and Fscore: %f with thresh: %f"\
         %(best_results["accuracy"],best_results["f1"],best_results["thresh"])

@@ -82,7 +82,7 @@ def main():
 
 
     l2_lambda = 1e-6
-    lr = 0.000009
+    lr = 0.00002
     dropout_rate = 0.5
     shuffle = True
     times = 0
@@ -92,7 +92,11 @@ def main():
 
     model_save_dir = "./model/pretrain/"
    
-    performance.performance(dev_docs,network_model) 
+    metrics = performance.performance(dev_docs,network_model) 
+
+    p,r,f = metrics["b3"]
+
+    f_b = [f]
   
     #for echo in range(30,200):
     for echo in range(20):
@@ -188,7 +192,13 @@ def main():
                 trick_reward = utils.get_reward_trick(cluster_info,gold_dict,new_cluster_info,action_list,candi_ids_return)
 
                 #reward = f + trick_reward
-                reward = f
+                average_f = float(sum(f_b))/len(f_b)
+
+                reward = (f - average_f)*10
+
+                f_b.append(f)
+                if len(f_b) > 128:
+                    f_b = f_b[1:]
 
                 index = 0
                 for data in tmp_data:
@@ -223,7 +233,8 @@ def main():
                     for s,e in zip(rl["starts"],rl["ends"]):
                         #action_prob: scores_reindex[s:e][1]
                         this_action = action_list[index]
-                        current_reward = reward + trick_reward[index]
+                        #current_reward = reward + trick_reward[index]
+                        current_reward = reward
 
                         #this_loss = -reward*(torch.transpose(F.log_softmax(torch.transpose(scores_reindex[s:e],0,1)),0,1)[this_action])
                         this_loss = -current_reward*(torch.transpose(F.log_softmax(torch.transpose(scores_reindex[s:e],0,1)),0,1)[this_action])

@@ -110,10 +110,11 @@ def performance(doc,network_model):
     print "B3: recall: %f precision: %f  f1: %f"%(r,p,f)
     r,p,f = metrics["ceaf"]
     print "CEAF: recall: %f precision: %f  f1: %f"%(r,p,f)
+    return metrics
 
 if __name__ == "__main__":
     DIR = args.DIR
-    network_file = "./model/pretrain/network_model_pretrain.50.top"
+    network_file = "./model/pretrain/network_model_pretrain.top.best"
     network_model = torch.load(network_file)
 
     reduced=""

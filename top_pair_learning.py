@@ -24,6 +24,7 @@ import evaluation
 #import network
 import net as network
 import Evaluate
+import performance
 
 import cPickle
 sys.setrecursionlimit(1000000)
@@ -31,7 +32,7 @@ sys.setrecursionlimit(1000000)
 print >> sys.stderr, os.getpid()
 
 if args.language == "en":
-    pair_feature_dimention = 77
+    pair_feature_dimention = 70
     mention_feature_dimention = 24
     span_dimention = 5*50
     embedding_dimention = 50
@@ -77,8 +78,8 @@ def main():
     test_docs = DataReader.DataGnerater("test"+reduced)
 
 
-    l2_lambda = 1e-5
-    lr = 0.0003
+    l2_lambda = 1e-6
+    lr = 0.0002
     dropout_rate = 0.5
     shuffle = True
     times = 0
@@ -95,7 +96,6 @@ def main():
         'f1': 0.0
         }
   
-    #for echo in range(30,200):
     for echo in range(100):
 
         start_time = timeit.default_timer()
@@ -255,7 +255,10 @@ def main():
 
         if (echo+1)%10 == 0:
             best_network_model = torch.load(model_save_dir+"network_model_pretrain.top.best") 
-            best_thres = Evaluate.evaluate(best_network_model,dev_docs,best_results["thresh"])
+            print "DEV:"
+            performance.performance(dev_docs,best_network_model)
+            print "TEST:"
+            performance.performance(test_docs,best_network_model)
 
 def get_metrics(gold, predict, thresh):
     pred = np.clip(np.floor(predict / thresh), 0, 1)
